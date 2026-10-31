@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>La ruta de las chuches – Halloween en Los Berrocales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDE3F4; --surface:#FFFFFF; --ink:#2A1A3A; --muted:#5E4A72; --line:#CDBBDD;
+  --pumpkin:#D9650F; --pumpkin-soft:#FBE0C8; --slime:#4F7A17; --moon:#FFF4D6; --moon-glow:rgba(217,101,15,.18);
+  --map-bg:#F7F1FB; --off:#FFFFFF;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1A0F26; --surface:#2A1A3A; --ink:#F3E9D2; --muted:#BBA8CF; --line:#45305C;
+    --pumpkin:#F2862E; --pumpkin-soft:#4A2A16; --slime:#9BC53D; --moon:#F3E9D2; --moon-glow:rgba(242,134,46,.28);
+    --map-bg:#22152F; --off:#1A0F26;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1A0F26; --surface:#2A1A3A; --ink:#F3E9D2; --muted:#BBA8CF; --line:#45305C;
+  --pumpkin:#F2862E; --pumpkin-soft:#4A2A16; --slime:#9BC53D; --moon:#F3E9D2; --moon-glow:rgba(242,134,46,.28);
+  --map-bg:#22152F; --off:#1A0F26;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Fredoka",ui-rounded,"Segoe UI",system-ui,sans-serif; font-size:17px; line-height:1.5;
+}
+a{color:var(--pumpkin)}
+:focus-visible{outline:3px solid var(--pumpkin);outline-offset:3px;border-radius:6px}
+
+/* Hero */
+.hero{position:relative; overflow:hidden; padding:56px 20px 40px; text-align:center}
+.moon{
+  position:absolute; left:50%; top:22px; width:260px; height:260px; transform:translateX(-50%);
+  border-radius:50%; background:radial-gradient(circle at 38% 35%, var(--moon) 0 58%, transparent 72%);
+  box-shadow:0 0 120px 40px var(--moon-glow); opacity:.9;
+}
+.hero h1{
+  position:relative; margin:40px 0 0; font-family:"Creepster","Fredoka",cursive; font-weight:400;
+  font-size:clamp(3rem,13vw,6rem); line-height:.95; letter-spacing:.02em; color:var(--pumpkin);
+  text-shadow:0 3px 0 var(--ink);
+}
+.hero p{position:relative; max-width:34em; margin:18px auto 0; color:var(--muted)}
+.hero .facts{color:var(--ink); font-weight:500}
+.bats{position:absolute; inset:0; pointer-events:none}
+.bat{position:absolute; fill:var(--ink); opacity:.85}
+@media (prefers-reduced-motion:no-preference){
+  .bat{animation:flap 1.6s ease-in-out infinite alternate}
+  .bat:nth-child(2){animation-delay:.5s}
+  .bat:nth-child(3){animation-delay:1s}
+}
+@keyframes flap{to{transform:translateY(-8px) scaleX(.85)}}
+
+/* Layout */
+main{max-width:1100px; margin:0 auto; padding:0 16px 48px; display:grid; gap:24px}
+@media (min-width:900px){ main{grid-template-columns:1.1fr 1fr; align-items:start} .map-wrap{position:sticky; top:calc(16px + env(safe-area-inset-top,0px))} }
+
+.map-wrap{background:var(--surface); border:2px solid var(--line); border-radius:24px; padding:14px}
+.map-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:2px 6px 10px; flex-wrap:wrap}
+.map-head h2{margin:0; font-size:1.25rem}
+.progress{font-weight:600; color:var(--pumpkin)}
+.bar{height:8px; border-radius:8px; background:var(--pumpkin-soft); overflow:hidden; margin:0 6px 12px}
+.bar span{display:block; height:100%; width:0; background:var(--pumpkin); transition:width .4s ease}
+svg.map{display:block; width:100%; height:auto; background:var(--map-bg); border-radius:16px}
+.route{fill:none; stroke:var(--slime); stroke-width:4; stroke-linecap:round; stroke-linejoin:round; opacity:.85}
+.marker{cursor:pointer}
+.marker circle.body{fill:var(--off); stroke:var(--pumpkin); stroke-width:3; transition:fill .25s}
+.marker text{font-family:"Fredoka",system-ui,sans-serif; font-weight:600; font-size:12px; fill:var(--pumpkin); text-anchor:middle; dominant-baseline:central; pointer-events:none}
+.marker path.stem{fill:var(--slime)}
+.marker.done circle.body{fill:var(--pumpkin)}
+.marker.done text{fill:var(--off)}
+.home path{fill:var(--ink)}
+.home text{font-family:"Fredoka",system-ui,sans-serif; font-size:12px; font-weight:600; fill:var(--ink); text-anchor:middle}
+.scale line{stroke:var(--muted); stroke-width:2}
+.scale text,.north text{font-family:"Fredoka",system-ui,sans-serif; font-size:11px; fill:var(--muted)}
+.north path{fill:var(--muted)}
+.map-note{font-size:.85rem; color:var(--muted); margin:10px 6px 2px}
+
+/* Google Maps */
+.gmaps{display:grid; gap:10px; margin-top:14px}
+.btn{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:12px 16px; border-radius:14px; text-decoration:none; font-weight:500;
+  background:var(--pumpkin); color:#1A0F26;
+}
+.btn small{font-weight:400; opacity:.85}
+.btn.ghost{background:transparent; color:var(--ink); border:2px solid var(--line)}
+
+/* List */
+section.stops h2,section.tips h2{font-size:1.5rem; margin:0 0 4px}
+.lede{color:var(--muted); margin:0 0 14px}
+ol.list{list-style:none; margin:0; padding:0; display:grid; gap:8px}
+.stop{
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px;
+  background:var(--surface); border:2px solid var(--line); border-radius:16px; padding:10px 12px;
+}
+.stop.done{border-color:var(--pumpkin)}
+.num{
+  width:38px; height:38px; border-radius:50%; display:grid; place-items:center; font-weight:600;
+  border:3px solid var(--pumpkin); color:var(--pumpkin); background:var(--off); cursor:pointer; font-size:1rem; font-family:inherit;
+}
+.stop.done .num{background:var(--pumpkin); color:var(--off)}
+.addr{margin:0; font-weight:500}
+.stop.done .addr{text-decoration:line-through; text-decoration-color:var(--pumpkin); text-decoration-thickness:2px}
+.note{margin:2px 0 0; font-size:.88rem; color:var(--muted)}
+.where{font-size:.9rem; white-space:nowrap}
+.reset{margin-top:14px; background:none; border:none; color:var(--muted); font:inherit; text-decoration:underline; cursor:pointer; padding:6px 0}
+
+.tips{grid-column:1/-1; background:var(--surface); border:2px dashed var(--line); border-radius:24px; padding:20px 22px}
+.tips ul{margin:8px 0 0; padding-left:1.2em; display:grid; gap:6px}
+footer{text-align:center; color:var(--muted); font-size:.9rem; padding:0 16px 32px}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="moon" aria-hidden="true"></div>
+  <svg class="bats" aria-hidden="true" viewBox="0 0 400 200" preserveAspectRatio="xMidYMin meet">
+    <path class="bat" transform="translate(40 40)" d="M0 8c6-2 10-8 12-8 1 3 3 4 5 4s4-1 5-4c2 0 6 6 12 8-4 0-7 2-8 5-2-2-4-2-6 0-1-1-2-2-3-2s-2 1-3 2c-2-2-4-2-6 0-1-3-4-5-8-5z"/>
+    <path class="bat" transform="translate(320 26) scale(.8)" d="M0 8c6-2 10-8 12-8 1 3 3 4 5 4s4-1 5-4c2 0 6 6 12 8-4 0-7 2-8 5-2-2-4-2-6 0-1-1-2-2-3-2s-2 1-3 2c-2-2-4-2-6 0-1-3-4-5-8-5z"/>
+    <path class="bat" transform="translate(350 110) scale(.6)" d="M0 8c6-2 10-8 12-8 1 3 3 4 5 4s4-1 5-4c2 0 6 6 12 8-4 0-7 2-8 5-2-2-4-2-6 0-1-1-2-2-3-2s-2 1-3 2c-2-2-4-2-6 0-1-3-4-5-8-5z"/>
+  </svg>
+  <h1>La ruta de<br>las chuches</h1>
+  <p class="facts">Halloween en Los Berrocales, Alpedrete. Sábado 31 de octubre.</p>
+  <p>14 casas con caramelos, unos 4 km a pie. Salimos de Calle de las Aguas, 39. Toca cada casa cuando la visitéis y su calabaza se encenderá.</p>
+</header>
+
+<main>
+  <div class="map-wrap">
+    <div class="map-head">
+      <h2>El mapa</h2>
+      <span class="progress" id="progress" aria-live="polite">0 de 14 casas</span>
+    </div>
+    <div class="bar" aria-hidden="true"><span id="bar"></span></div>
+    <svg class="map" id="map" role="img" aria-label="Esquema de la ruta con las 14 casas numeradas"></svg>
+    <p class="map-note">Esquema orientativo: muestra el orden de las casas, no el trazado de las calles. Para ir paso a paso, usad Google Maps.</p>
+    <div class="gmaps">
+      <a class="btn" id="leg1" target="_blank" rel="noopener">Abrir en Google Maps <small>Casas 1 a 8</small></a>
+      <a class="btn ghost" id="leg2" target="_blank" rel="noopener">Abrir en Google Maps <small>Casas 9 a 14 y vuelta</small></a>
+    </div>
+  </div>
+
+  <section class="stops">
+    <h2>Las casas, en orden</h2>
+    <p class="lede">Primero la zona sur, luego la norte, y acabamos al lado de la salida.</p>
+    <ol class="list" id="list"></ol>
+    <button class="reset" id="reset" type="button">Empezar la ruta de nuevo</button>
+  </section>
+
+  <section class="tips">
+    <h2>Antes de salir</h2>
+    <ul>
+      <li>Llevad linterna y algo reflectante: a partir de las siete ya es de noche.</li>
+      <li>Los peques, siempre con un adulto. Caminad por la acera y cruzad juntos.</li>
+      <li>Una bolsa grande para las chuches y otra pequeña para los envoltorios.</li>
+      <li>Llamad solo en estas casas: son las que se han apuntado.</li>
+      <li>Y lo más importante: ¡decid «truco o trato» y dad las gracias!</li>
+    </ul>
+  </section>
+</main>
+
+<footer>¡Feliz Halloween! 🎃</footer>
+
+<script>
+(function(){
+  var HOME = {lat:40.6534674, lng:-4.0407924};
+  var STOPS = [
+    {name:"Calle de las Aguas, 13", lat:40.6532537, lng:-4.0385663},
+    {name:"Travesía de los Enebros, 6", lat:40.6530366, lng:-4.0388596},
+    {name:"Travesía de los Enebros, 7", lat:40.6528356, lng:-4.0389459},
+    {name:"Calle de los Enebros, 28", lat:40.6528363, lng:-4.0384399},
+    {name:"Calle de los Enebros, 13", lat:40.6513246, lng:-4.0366384},
+    {name:"Calle de las Magnolias, 5", lat:40.647252, lng:-4.0348915, note:"La más alejada. Si hay cansancio, se puede saltar."},
+    {name:"Calle de las Aguas, 5", lat:40.6528065, lng:-4.0364526},
+    {name:"Avenida de los Catedráticos, 33", lat:40.6547786, lng:-4.0383245},
+    {name:"Calle de las Ciencias, 36", lat:40.6568355, lng:-4.0360908},
+    {name:"Avenida de los Catedráticos, 13", lat:40.6574547, lng:-4.0394614},
+    {name:"Calle de las Artes, 6", lat:40.6567284, lng:-4.0404561},
+    {name:"Calle de las Artes, 8", lat:40.6564907, lng:-4.0405119},
+    {name:"Calle del Prado del Arroyo, 13", lat:40.6583561, lng:-4.0442839},
+    {name:"Calle de los Gladiolos, 2", lat:40.6550125, lng:-4.0446613, note:"Última parada, a un paso de la salida."}
+  ];
+  var KEY = "ruta-chuches-berrocales-2026";
+  var done = [];
+  try { done = JSON.parse(localStorage.getItem(KEY)) || []; } catch(e) { done = []; }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(done)); } catch(e){} }
+
+  // Google Maps links
+  function c(p){ return p.lat + "," + p.lng; }
+  function dir(o, d, w){
+    return "https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=" + c(o) +
+      "&destination=" + c(d) + "&waypoints=" + w.map(c).join("%7C");
+  }
+  document.getElementById("leg1").href = dir(HOME, STOPS[7], STOPS.slice(0,7));
+  document.getElementById("leg2").href = dir(STOPS[7], HOME, STOPS.slice(8));
+
+  // Projection
+  var NS = "http://www.w3.org/2000/svg";
+  var all = [HOME].concat(STOPS);
+  var k = Math.cos(40.654 * Math.PI/180);
+  var minX = Math.min.apply(null, all.map(function(p){return p.lng*k;}));
+  var maxX = Math.max.apply(null, all.map(function(p){return p.lng*k;}));
+  var minY = Math.min.apply(null, all.map(function(p){return -p.lat;}));
+  var maxY = Math.max.apply(null, all.map(function(p){return -p.lat;}));
+  var W = 400, PAD = 34;
+  var s = (W - PAD*2) / (maxX - minX);
+  var H = Math.round((maxY - minY) * s + PAD*2 + 30);
+  function proj(p){ return {x: PAD + (p.lng*k - minX)*s, y: PAD + (-p.lat - minY)*s}; }
+  var pts = all.map(proj);
+
+  // Spread out houses that are very close so numbers stay readable
+  for (var it=0; it<80; it++){
+    for (var i=0;i<pts.length;i++) for (var j=i+1;j<pts.length;j++){
+      var dx=pts[j].x-pts[i].x, dy=pts[j].y-pts[i].y, d=Math.sqrt(dx*dx+dy*dy)||0.01, min=27;
+      if (d<min){ var m=(min-d)/2, ux=dx/d, uy=dy/d;
+        pts[i].x-=ux*m; pts[i].y-=uy*m; pts[j].x+=ux*m; pts[j].y+=uy*m; }
+    }
+  }
+
+  var svg = document.getElementById("map");
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  function el(tag, attrs, parent){ var e=document.createElementNS(NS,tag); for (var a in attrs) e.setAttribute(a, attrs[a]); (parent||svg).appendChild(e); return e; }
+
+  // Route: home -> 1..14 -> home
+  var order = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,0];
+  var dpath = order.map(function(i,n){ return (n?"L":"M") + pts[i].x.toFixed(1) + " " + pts[i].y.toFixed(1); }).join(" ");
+  var route = el("path", {d:dpath, class:"route"});
+  var len = route.getTotalLength ? route.getTotalLength() : 0;
+  if (len && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+    route.style.strokeDasharray = len; route.style.strokeDashoffset = len;
+    route.getBoundingClientRect();
+    route.style.transition = "stroke-dashoffset 2.4s ease-in-out";
+    requestAnimationFrame(function(){ route.style.strokeDashoffset = 0; });
+  }
+
+  // Home
+  var h = pts[0], hg = el("g", {class:"home", transform:"translate("+h.x+" "+h.y+")"});
+  el("path", {d:"M-12 2 L0 -11 L12 2 L8 2 L8 12 L-8 12 L-8 2 Z"}, hg);
+  el("text", {x:0, y:26}, hg).textContent = "Salida";
+
+  // Markers
+  var markers = [];
+  STOPS.forEach(function(st, i){
+    var p = pts[i+1];
+    var g = el("g", {class:"marker", transform:"translate("+p.x.toFixed(1)+" "+p.y.toFixed(1)+")", tabindex:"0", role:"button"});
+    el("path", {class:"stem", d:"M-2 -16 q2 -6 6 -6 l0 3 q-3 0 -3 4 z"}, g);
+    el("circle", {class:"body", r:12}, g);
+    el("text", {x:0, y:1}, g).textContent = i+1;
+    g.addEventListener("click", function(){ toggle(i); });
+    g.addEventListener("keydown", function(e){ if (e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(i); } });
+    markers.push(g);
+  });
+
+  // North arrow and scale bar (100 m)
+  var ng = el("g", {class:"north", transform:"translate("+(W-24)+" 24)"});
+  el("path", {d:"M0 -12 L6 6 L0 2 L-6 6 Z"}, ng);
+  el("text", {x:0, y:20, "text-anchor":"middle"}, ng).textContent = "N";
+  var px100 = 100 / 111320 * s; // 100 m in px
+  var sg = el("g", {class:"scale", transform:"translate(16 "+(H-16)+")"});
+  el("line", {x1:0, y1:0, x2:px100, y2:0}, sg);
+  el("line", {x1:0, y1:-4, x2:0, y2:4}, sg);
+  el("line", {x1:px100, y1:-4, x2:px100, y2:4}, sg);
+  el("text", {x:px100+6, y:4}, sg).textContent = "100 m";
+
+  // List
+  var list = document.getElementById("list"), rows = [];
+  STOPS.forEach(function(st, i){
+    var li = document.createElement("li"); li.className = "stop";
+    var b = document.createElement("button"); b.className = "num"; b.type = "button"; b.textContent = i+1;
+    b.addEventListener("click", function(){ toggle(i); });
+    var info = document.createElement("div");
+    var a = document.createElement("p"); a.className = "addr"; a.textContent = st.name; info.appendChild(a);
+    if (st.note){ var n = document.createElement("p"); n.className = "note"; n.textContent = st.note; info.appendChild(n); }
+    var link = document.createElement("a"); link.className = "where"; link.target = "_blank"; link.rel = "noopener";
+    link.href = "https://www.google.com/maps/search/?api=1&query=" + c(st); link.textContent = "Ver casa";
+    li.appendChild(b); li.appendChild(info); li.appendChild(link);
+    list.appendChild(li); rows.push({li:li, btn:b});
+  });
+
+  function toggle(i){
+    var at = done.indexOf(i);
+    if (at === -1) done.push(i); else done.splice(at,1);
+    save(); render();
+  }
+  function render(){
+    STOPS.forEach(function(st, i){
+      var on = done.indexOf(i) !== -1;
+      markers[i].classList.toggle("done", on);
+      markers[i].setAttribute("aria-label", "Casa " + (i+1) + ", " + st.name + (on ? ", visitada" : ", pendiente"));
+      rows[i].li.classList.toggle("done", on);
+      rows[i].btn.setAttribute("aria-pressed", on);
+      rows[i].btn.setAttribute("aria-label", "Marcar casa " + (i+1) + " como " + (on ? "pendiente" : "visitada"));
+    });
+    var n = done.length;
+    document.getElementById("progress").textContent = n === STOPS.length ? "¡Las 14! Ruta completada 🎃" : n + " de 14 casas";
+    document.getElementById("bar").style.width = (n / STOPS.length * 100) + "%";
+  }
+  document.getElementById("reset").addEventListener("click", function(){ done = []; save(); render(); });
+  render();
+})();
+</script>
+</body>
+</html>
