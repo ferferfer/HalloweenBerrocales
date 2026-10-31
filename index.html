@@ -6,6 +6,7 @@
 <title>La ruta de las chuches – Halloween en Los Berrocales</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -73,19 +74,12 @@ main{max-width:1100px; margin:0 auto; padding:0 16px 48px; display:grid; gap:24p
 .progress{font-weight:600; color:var(--pumpkin)}
 .bar{height:8px; border-radius:8px; background:var(--pumpkin-soft); overflow:hidden; margin:0 6px 12px}
 .bar span{display:block; height:100%; width:0; background:var(--pumpkin); transition:width .4s ease}
-svg.map{display:block; width:100%; height:auto; background:var(--map-bg); border-radius:16px}
-.route{fill:none; stroke:var(--slime); stroke-width:4; stroke-linecap:round; stroke-linejoin:round; opacity:.85}
-.marker{cursor:pointer}
-.marker circle.body{fill:var(--off); stroke:var(--pumpkin); stroke-width:3; transition:fill .25s}
-.marker text{font-family:"Fredoka",system-ui,sans-serif; font-weight:600; font-size:12px; fill:var(--pumpkin); text-anchor:middle; dominant-baseline:central; pointer-events:none}
-.marker path.stem{fill:var(--slime)}
-.marker.done circle.body{fill:var(--pumpkin)}
-.marker.done text{fill:var(--off)}
-.home path{fill:var(--ink)}
-.home text{font-family:"Fredoka",system-ui,sans-serif; font-size:12px; font-weight:600; fill:var(--ink); text-anchor:middle}
-.scale line{stroke:var(--muted); stroke-width:2}
-.scale text,.north text{font-family:"Fredoka",system-ui,sans-serif; font-size:11px; fill:var(--muted)}
-.north path{fill:var(--muted)}
+#map{height:min(70vh,560px); border-radius:16px; z-index:0; background:var(--map-bg)}
+.pin{width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:var(--off); border:3px solid var(--pumpkin); color:var(--pumpkin); font:600 13px "Fredoka",system-ui,sans-serif; box-shadow:0 2px 6px rgba(0,0,0,.35); transition:background .25s}
+.pin.done{background:var(--pumpkin); color:var(--off)}
+.pin-home{font-size:24px; line-height:30px; text-align:center; filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9)} }
+:root[data-theme="dark"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9)}
 .map-note{font-size:.85rem; color:var(--muted); margin:10px 6px 2px}
 
 /* Google Maps */
@@ -144,8 +138,8 @@ footer{text-align:center; color:var(--muted); font-size:.9rem; padding:0 16px 32
       <span class="progress" id="progress" aria-live="polite">0 de 14 casas</span>
     </div>
     <div class="bar" aria-hidden="true"><span id="bar"></span></div>
-    <svg class="map" id="map" role="img" aria-label="Esquema de la ruta con las 14 casas numeradas"></svg>
-    <p class="map-note">Esquema orientativo: muestra el orden de las casas, no el trazado de las calles. Para ir paso a paso, usad Google Maps.</p>
+    <div id="map" aria-label="Mapa de la ruta con las 14 casas numeradas"></div>
+    <p class="map-note"><span id="routeinfo">Ruta a pie por las calles.</span> Toca una calabaza cuando visitéis esa casa.</p>
     <div class="gmaps">
       <a class="btn" id="leg1" target="_blank" rel="noopener">Abrir en Google Maps <small>Casas 1 a 8</small></a>
       <a class="btn ghost" id="leg2" target="_blank" rel="noopener">Abrir en Google Maps <small>Casas 9 a 14 y vuelta</small></a>
@@ -173,6 +167,7 @@ footer{text-align:center; color:var(--muted); font-size:.9rem; padding:0 16px 32
 
 <footer>¡Feliz Halloween! 🎃</footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function(){
   var HOME = {lat:40.6534674, lng:-4.0407924};
@@ -206,73 +201,46 @@ footer{text-align:center; color:var(--muted); font-size:.9rem; padding:0 16px 32
   document.getElementById("leg1").href = dir(HOME, STOPS[7], STOPS.slice(0,7));
   document.getElementById("leg2").href = dir(STOPS[7], HOME, STOPS.slice(8));
 
-  // Projection
-  var NS = "http://www.w3.org/2000/svg";
+  // Map
   var all = [HOME].concat(STOPS);
-  var k = Math.cos(40.654 * Math.PI/180);
-  var minX = Math.min.apply(null, all.map(function(p){return p.lng*k;}));
-  var maxX = Math.max.apply(null, all.map(function(p){return p.lng*k;}));
-  var minY = Math.min.apply(null, all.map(function(p){return -p.lat;}));
-  var maxY = Math.max.apply(null, all.map(function(p){return -p.lat;}));
-  var W = 400, PAD = 34;
-  var s = (W - PAD*2) / (maxX - minX);
-  var H = Math.round((maxY - minY) * s + PAD*2 + 30);
-  function proj(p){ return {x: PAD + (p.lng*k - minX)*s, y: PAD + (-p.lat - minY)*s}; }
-  var pts = all.map(proj);
+  var map = L.map("map", {scrollWheelZoom:false});
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+  map.fitBounds(L.latLngBounds(all.map(function(p){return [p.lat,p.lng];})), {padding:[24,24]});
 
-  // Spread out houses that are very close so numbers stay readable
-  for (var it=0; it<80; it++){
-    for (var i=0;i<pts.length;i++) for (var j=i+1;j<pts.length;j++){
-      var dx=pts[j].x-pts[i].x, dy=pts[j].y-pts[i].y, d=Math.sqrt(dx*dx+dy*dy)||0.01, min=27;
-      if (d<min){ var m=(min-d)/2, ux=dx/d, uy=dy/d;
-        pts[i].x-=ux*m; pts[i].y-=uy*m; pts[j].x+=ux*m; pts[j].y+=uy*m; }
-    }
-  }
+  var slime = getComputedStyle(document.documentElement).getPropertyValue("--slime").trim() || "#9BC53D";
+  var order = [HOME].concat(STOPS, [HOME]);
+  var line = L.polyline(order.map(function(p){return [p.lat,p.lng];}), {color:slime, weight:4, opacity:.8, dashArray:"2 9"}).addTo(map);
 
-  var svg = document.getElementById("map");
-  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
-  function el(tag, attrs, parent){ var e=document.createElementNS(NS,tag); for (var a in attrs) e.setAttribute(a, attrs[a]); (parent||svg).appendChild(e); return e; }
+  // Walking route along real streets (falls back to straight lines if unavailable)
+  var coords = order.map(function(p){return p.lng + "," + p.lat;}).join(";");
+  fetch("https://routing.openstreetmap.de/routed-foot/route/v1/driving/" + coords + "?overview=full&geometries=geojson")
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.code !== "Ok" || !d.routes || !d.routes[0]) return;
+      map.removeLayer(line);
+      L.geoJSON(d.routes[0].geometry, {style:{color:slime, weight:5, opacity:.85}}).addTo(map);
+      var km = (d.routes[0].distance/1000).toFixed(1).replace(".", ",");
+      document.getElementById("routeinfo").textContent = "Ruta a pie por las calles: " + km + " km en total.";
+    })
+    .catch(function(){});
 
-  // Route: home -> 1..14 -> home
-  var order = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,0];
-  var dpath = order.map(function(i,n){ return (n?"L":"M") + pts[i].x.toFixed(1) + " " + pts[i].y.toFixed(1); }).join(" ");
-  var route = el("path", {d:dpath, class:"route"});
-  var len = route.getTotalLength ? route.getTotalLength() : 0;
-  if (len && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
-    route.style.strokeDasharray = len; route.style.strokeDashoffset = len;
-    route.getBoundingClientRect();
-    route.style.transition = "stroke-dashoffset 2.4s ease-in-out";
-    requestAnimationFrame(function(){ route.style.strokeDashoffset = 0; });
-  }
+  L.marker([HOME.lat, HOME.lng], {
+    icon:L.divIcon({className:"", html:'<div class="pin-home">🏠</div>', iconSize:[30,30], iconAnchor:[15,15]}),
+    title:"Salida: Calle de las Aguas, 39", zIndexOffset:1000
+  }).addTo(map).bindTooltip("Salida: Calle de las Aguas, 39", {direction:"top", offset:[0,-14]});
 
-  // Home
-  var h = pts[0], hg = el("g", {class:"home", transform:"translate("+h.x+" "+h.y+")"});
-  el("path", {d:"M-12 2 L0 -11 L12 2 L8 2 L8 12 L-8 12 L-8 2 Z"}, hg);
-  el("text", {x:0, y:26}, hg).textContent = "Salida";
-
-  // Markers
   var markers = [];
   STOPS.forEach(function(st, i){
-    var p = pts[i+1];
-    var g = el("g", {class:"marker", transform:"translate("+p.x.toFixed(1)+" "+p.y.toFixed(1)+")", tabindex:"0", role:"button"});
-    el("path", {class:"stem", d:"M-2 -16 q2 -6 6 -6 l0 3 q-3 0 -3 4 z"}, g);
-    el("circle", {class:"body", r:12}, g);
-    el("text", {x:0, y:1}, g).textContent = i+1;
-    g.addEventListener("click", function(){ toggle(i); });
-    g.addEventListener("keydown", function(e){ if (e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(i); } });
-    markers.push(g);
+    var m = L.marker([st.lat, st.lng], {
+      icon:L.divIcon({className:"", html:'<div class="pin">' + (i+1) + '</div>', iconSize:[30,30], iconAnchor:[15,15]}),
+      title:(i+1) + ". " + st.name, riseOnHover:true
+    }).addTo(map);
+    m.bindTooltip((i+1) + ". " + st.name, {direction:"top", offset:[0,-14]});
+    m.on("click", function(){ toggle(i); });
+    markers.push(m);
   });
-
-  // North arrow and scale bar (100 m)
-  var ng = el("g", {class:"north", transform:"translate("+(W-24)+" 24)"});
-  el("path", {d:"M0 -12 L6 6 L0 2 L-6 6 Z"}, ng);
-  el("text", {x:0, y:20, "text-anchor":"middle"}, ng).textContent = "N";
-  var px100 = 100 / 111320 * s; // 100 m in px
-  var sg = el("g", {class:"scale", transform:"translate(16 "+(H-16)+")"});
-  el("line", {x1:0, y1:0, x2:px100, y2:0}, sg);
-  el("line", {x1:0, y1:-4, x2:0, y2:4}, sg);
-  el("line", {x1:px100, y1:-4, x2:px100, y2:4}, sg);
-  el("text", {x:px100+6, y:4}, sg).textContent = "100 m";
 
   // List
   var list = document.getElementById("list"), rows = [];
@@ -297,8 +265,8 @@ footer{text-align:center; color:var(--muted); font-size:.9rem; padding:0 16px 32
   function render(){
     STOPS.forEach(function(st, i){
       var on = done.indexOf(i) !== -1;
-      markers[i].classList.toggle("done", on);
-      markers[i].setAttribute("aria-label", "Casa " + (i+1) + ", " + st.name + (on ? ", visitada" : ", pendiente"));
+      var me = markers[i].getElement();
+      if (me){ me.firstChild.classList.toggle("done", on); me.setAttribute("aria-label", "Casa " + (i+1) + ", " + st.name + (on ? ", visitada" : ", pendiente")); }
       rows[i].li.classList.toggle("done", on);
       rows[i].btn.setAttribute("aria-pressed", on);
       rows[i].btn.setAttribute("aria-label", "Marcar casa " + (i+1) + " como " + (on ? "pendiente" : "visitada"));
